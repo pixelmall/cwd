@@ -35,8 +35,9 @@ export const getVisitOverview = async (
 		const statsParams: any[] = [];
 
 		if (siteId) {
-			statsSql += ' WHERE site_id = ?';
-			statsParams.push(siteId);
+			// 匹配指定 siteId 或空值（兼容旧数据）
+			statsSql += ' WHERE (site_id = ? OR site_id = ? OR site_id IS NULL)';
+			statsParams.push(siteId, '');
 		}
 
 		const { results } = await c.env.CWD_DB.prepare(statsSql).bind(...statsParams).all<{
@@ -98,11 +99,12 @@ export const getVisitOverview = async (
 
 		let dailySql =
 			'SELECT date, count FROM page_visit_daily WHERE date >= ?';
-		const params: string[] = [earliestDate];
+		const params: any[] = [earliestDate];
 
 		if (siteId) {
-			dailySql += ' AND site_id = ?';
-			params.push(siteId);
+			// 匹配指定 siteId 或空值（兼容旧数据）
+			dailySql += ' AND (site_id = ? OR site_id = ? OR site_id IS NULL)';
+			params.push(siteId, '');
 		}
 
 		const { results: dailyRows } = await c.env.CWD_DB.prepare(dailySql)
@@ -232,8 +234,9 @@ export const getVisitPages = async (c: Context<{ Bindings: Bindings }>) => {
 		const params: any[] = [];
 
 		if (siteId) {
-			sql += ' WHERE site_id = ?';
-			params.push(siteId);
+			// 匹配指定 siteId 或空值（兼容旧数据）
+			sql += ' WHERE (site_id = ? OR site_id = ? OR site_id IS NULL)';
+			params.push(siteId, '');
 		}
 
 		const { results } = await c.env.CWD_DB.prepare(sql).bind(...params).all<{
