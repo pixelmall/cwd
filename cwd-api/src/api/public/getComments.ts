@@ -1,10 +1,11 @@
 import { Context } from 'hono'
 import { Bindings } from '../../bindings'
 import { getCravatar } from '../../utils/getAvatar'
+import { decodePostSlug, getAllSlugFormats, escapeLikePattern } from '../../utils/decodePostSlug'
 
 export const getComments = async (c: Context<{ Bindings: Bindings }>) => {
   const rawPostSlug = c.req.query('post_slug') || ''
-  const postSlug = rawPostSlug.trim()
+  const postSlug = decodePostSlug(rawPostSlug)
   const page = parseInt(c.req.query('page') || '1')
   const limit = Math.min(parseInt(c.req.query('limit') || '20'), 50)
   const nested = c.req.query('nested') !== 'false'
@@ -42,13 +43,14 @@ export const getComments = async (c: Context<{ Bindings: Bindings }>) => {
   }
 
   try {
-    const equalSlugs = Array.from(new Set(slugList))
-    const likePatternsSet = new Set<string>()
-    for (const s of equalSlugs) {
-      likePatternsSet.add(`${s}#%`)
-      likePatternsSet.add(`${s}?%`)
+    const allSlugFormats = new Set<string>()
+    for (const s of slugList) {
+      for (const format of getAllSlugFormats(s)) {
+        allSlugFormats.add(format)
+      }
     }
-    const likePatterns = Array.from(likePatternsSet)
+    const equalSlugs = Array.from(allSlugFormats)
+    
     const whereParts: string[] = []
     if (equalSlugs.length === 1) {
       whereParts.push('post_slug = ?')
@@ -56,16 +58,13 @@ export const getComments = async (c: Context<{ Bindings: Bindings }>) => {
       const placeholders = equalSlugs.map(() => '?').join(', ')
       whereParts.push(`post_slug IN (${placeholders})`)
     }
-    for (let i = 0; i < likePatterns.length; i += 1) {
-      whereParts.push('post_slug LIKE ?')
-    }
     const whereClause =
       whereParts.length > 0
-        ? `status = "approved" AND (${whereParts.join(' OR ')})`
-        : 'status = "approved"'
+        ? `(${whereParts.join(' OR ')})`
+        : '1=1'
     
-    let finalWhereClause = whereClause
-    const bindParams: unknown[] = [...equalSlugs, ...likePatterns]
+    let finalWhereClause = `status = "approved" AND ${whereClause}`
+    const bindParams: unknown[] = [...equalSlugs]
 
     if (siteId) {
       finalWhereClause += ' AND site_id = ?'

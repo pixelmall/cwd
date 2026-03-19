@@ -1,10 +1,11 @@
 import type { Context } from 'hono';
 import type { Bindings } from '../../bindings';
+import { decodePostSlug } from '../../utils/decodePostSlug';
 
 export const getPagePv = async (c: Context<{ Bindings: Bindings }>) => {
 	try {
 		const rawPostSlug = c.req.query('post_slug') || '';
-		const postSlug = rawPostSlug.trim();
+		const postSlug = decodePostSlug(rawPostSlug);
 		const rawSiteId = c.req.query('siteId') || '';
 		const siteId = rawSiteId && rawSiteId !== 'default' ? rawSiteId : '';
 

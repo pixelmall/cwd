@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import type { Bindings } from '../../bindings';
+import { decodePostSlug } from '../../utils/decodePostSlug';
 
 type LikeStatusResponse = {
 	liked: boolean;
@@ -36,7 +37,7 @@ export const getLikeStatus = async (
 ): Promise<Response> => {
 	try {
 		const rawPostSlug = c.req.query('post_slug') || '';
-		const postSlug = rawPostSlug.trim();
+		const postSlug = decodePostSlug(rawPostSlug);
 		const siteId = c.req.query('siteId') || '';
 
 		if (!postSlug) {
@@ -92,13 +93,14 @@ export const likePage = async (
 
 		const rawPostSlug =
 			typeof body.postSlug === 'string' ? body.postSlug.trim() : '';
+		const postSlug = decodePostSlug(rawPostSlug);
 		const rawPostTitle =
 			typeof body.postTitle === 'string' ? body.postTitle.trim() : '';
 		const rawPostUrl =
 			typeof body.postUrl === 'string' ? body.postUrl.trim() : '';
 		const siteId = typeof body.siteId === 'string' ? body.siteId.trim() : '';
 
-		if (!rawPostSlug) {
+		if (!postSlug) {
 			return c.json({ message: 'postSlug is required' }, 400);
 		}
 
@@ -109,7 +111,7 @@ export const likePage = async (
 		const existingLike = await c.env.CWD_DB.prepare(
 			'SELECT id FROM Likes WHERE page_slug = ? AND user_id = ? AND site_id = ?'
 		)
-			.bind(rawPostSlug, userId, siteId)
+			.bind(postSlug, userId, siteId)
 			.first<{ id: number }>();
 
 		let alreadyLiked = false;
@@ -118,7 +120,7 @@ export const likePage = async (
 			await c.env.CWD_DB.prepare(
 				'INSERT INTO Likes (page_slug, user_id, created_at, site_id) VALUES (?, ?, ?, ?)'
 			)
-				.bind(rawPostSlug, userId, now, siteId)
+				.bind(postSlug, userId, now, siteId)
 				.run();
 		} else {
 			alreadyLiked = true;
@@ -127,7 +129,7 @@ export const likePage = async (
 		const pageStatsRow = await c.env.CWD_DB.prepare(
 			'SELECT id FROM page_stats WHERE post_slug = ? AND site_id = ?'
 		)
-			.bind(rawPostSlug, siteId)
+			.bind(postSlug, siteId)
 			.first<{ id: number }>();
 
 		if (!pageStatsRow) {
@@ -135,7 +137,7 @@ export const likePage = async (
 				'INSERT INTO page_stats (post_slug, post_title, post_url, pv, last_visit_at, created_at, updated_at, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
 			)
 				.bind(
-					rawPostSlug,
+					postSlug,
 					rawPostTitle || null,
 					rawPostUrl || null,
 					0,
@@ -161,7 +163,7 @@ export const likePage = async (
 		const totalRow = await c.env.CWD_DB.prepare(
 			'SELECT COUNT(*) AS count FROM Likes WHERE page_slug = ? AND site_id = ?'
 		)
-			.bind(rawPostSlug, siteId)
+			.bind(postSlug, siteId)
 			.first<{ count: number }>();
 
 		const totalLikes = totalRow?.count || 0;
