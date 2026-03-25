@@ -466,8 +466,14 @@ export class CWDComments {
 				onUpdateReplyContent: (content) => this.store.updateReplyContent(content),
 				onClearReplyError: () => this.store.clearReplyError(),
           replyPlaceholder: this.config.commentPlaceholder,
-				onPrevPage: () => this.store.goToPage(state.pagination.page - 1),
-				onNextPage: () => this.store.goToPage(state.pagination.page + 1),
+				onPrevPage: () => {
+					const currentState = this.store.store.getState();
+					this.store.goToPage(currentState.pagination.page - 1);
+				},
+				onNextPage: () => {
+					const currentState = this.store.store.getState();
+					this.store.goToPage(currentState.pagination.page + 1);
+				},
 				onGoToPage: (page) => this.store.goToPage(page),
 				onLikeComment: (commentId, isLike) => {
 					if (this.store && typeof this.store.likeComment === 'function') {
