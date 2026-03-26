@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import type { Bindings } from '../../bindings';
+import { decodePostSlug } from '../../utils/decodePostSlug';
 
 type TrackVisitBody = {
 	postSlug?: string;
@@ -32,11 +33,12 @@ export const trackVisit = async (c: Context<{ Bindings: Bindings }>) => {
 		const body = (await c.req.json().catch(() => ({}))) as TrackVisitBody;
 
 		const rawPostSlug = typeof body.postSlug === 'string' ? body.postSlug.trim() : '';
+		const postSlug = decodePostSlug(rawPostSlug);
 		const rawPostTitle = typeof body.postTitle === 'string' ? body.postTitle.trim() : '';
 		const rawPostUrl = typeof body.postUrl === 'string' ? body.postUrl.trim() : '';
 		const rawSiteId = typeof body.siteId === 'string' ? body.siteId.trim() : '';
 
-		if (!rawPostSlug) {
+		if (!postSlug) {
 			return c.json({ message: 'postSlug is required' }, 400);
 		}
 
@@ -47,10 +49,9 @@ export const trackVisit = async (c: Context<{ Bindings: Bindings }>) => {
 
 		const domain =
 			extractDomain(rawPostUrl) ||
-			extractDomain(rawPostSlug) ||
+			extractDomain(postSlug) ||
 			null;
 
-		// Upsert page_stats using ON CONFLICT (site_id, post_slug)
 		await c.env.CWD_DB.prepare(
 			`INSERT INTO page_stats (site_id, post_slug, post_title, post_url, pv, last_visit_at, created_at, updated_at) 
 			 VALUES (?, ?, ?, ?, 1, ?, ?, ?)
@@ -63,7 +64,7 @@ export const trackVisit = async (c: Context<{ Bindings: Bindings }>) => {
 		)
 			.bind(
 				rawSiteId,
-				rawPostSlug,
+				postSlug,
 				rawPostTitle || null,
 				rawPostUrl || null,
 				nowTs,

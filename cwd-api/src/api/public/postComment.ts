@@ -12,8 +12,8 @@ import {
   EmailNotificationSettings
 } from '../../utils/email';
 import { loadTelegramSettings, sendTelegramMessage } from '../../utils/telegram';
+import { decodePostSlug } from '../../utils/decodePostSlug';
 
-// 检查内容，将<script>标签之间的内容删除
 export function checkContent(content: string): string {
     return content.replace(/<script[\s\S]*?<\/script>/g, "");
 }
@@ -23,7 +23,8 @@ export const postComment = async (c: Context<{ Bindings: Bindings }>) => {
   if (!data || typeof data !== 'object') {
     return c.json({ message: '无效的请求体' }, 400);
   }
-  const { post_slug, content: rawContent, name: rawName, email, url, post_title, post_url, adminToken } = data;
+  const { post_slug: rawPostSlug, content: rawContent, name: rawName, email, url, post_title, post_url, adminToken } = data;
+  const post_slug = decodePostSlug(rawPostSlug || '');
   const site_id = data.site_id ? String(data.site_id).trim() : "";
   const parentId = (data as any).parent_id ?? (data as any).parentId ?? null;
   if (!post_slug || typeof post_slug !== 'string') {
