@@ -1,1 +1,18 @@
+name: Auto Sync Fork
 
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每6小时自动同步一次
+  workflow_dispatch:      # 允许手动点一下就同步
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync with upstream
+        uses: dabreadman/sync-upstream@v1
+        with:
+          upstream: anghunk/cwd
+          upstream-branch: main
+          branch: main
+          token: ${{ secrets.GITHUB_TOKEN }}
