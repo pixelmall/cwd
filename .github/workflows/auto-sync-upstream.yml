@@ -1,0 +1,27 @@
+name: Auto Sync Fork with Upstream
+
+# 触发规则：每6小时自动同步 + 支持手动一键同步
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+# 任务配置
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Sync with upstream
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          upstream_repository: anghunk/cwd
+          upstream_branch: main
+          target_branch: main
+          git_pull_args: --ff-only
+          github_token: ${{ secrets.GITHUB_TOKEN }}
